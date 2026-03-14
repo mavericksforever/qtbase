@@ -323,9 +323,12 @@ QDebug operator<<(QDebug debug, const QCFString &string)
 #ifdef Q_OS_MACOS
 bool qt_mac_applicationIsInDarkMode()
 {
-    auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
-            @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
-    return [appearance isEqualToString:NSAppearanceNameDarkAqua];
+    if (@available(macOS 10.14, *)) {
+        auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
+                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
+        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
+    }
+    return false;
 }
 
 bool qt_mac_runningUnderRosetta()

@@ -64,7 +64,7 @@ static QPalette *qt_mac_createSystemPalette()
     // System palette initialization:
     QBrush br = qt_mac_toQBrush([NSColor selectedControlColor]);
     palette->setBrush(QPalette::Active, QPalette::Highlight, br);
-    const auto inactiveHighlight = qt_mac_toQBrush([NSColor unemphasizedSelectedContentBackgroundColor]);
+    const auto inactiveHighlight = qt_mac_toQBrush(@available(macOS 10.14, *) ? [NSColor unemphasizedSelectedContentBackgroundColor] : [NSColor secondarySelectedControlColor]);
     palette->setBrush(QPalette::Inactive, QPalette::Highlight, inactiveHighlight);
     palette->setBrush(QPalette::Disabled, QPalette::Highlight, inactiveHighlight);
 
@@ -87,15 +87,22 @@ static QPalette *qt_mac_createSystemPalette()
 
     palette->setBrush(QPalette::ToolTipBase, qt_mac_toQBrush([NSColor controlColor]));
 
-    palette->setColor(QPalette::Normal, QPalette::Link, qt_mac_toQColor([NSColor linkColor]));
+    if (@available(macOS 10.10, *))
+        palette->setColor(QPalette::Normal, QPalette::Link, qt_mac_toQColor([NSColor linkColor]));
+    else
+        palette->setColor(QPalette::Normal, QPalette::Link, QColor(0, 104, 218));
 
-    qc = qt_mac_toQColor([NSColor placeholderTextColor]);
+    qc = @available(macOS 10.10, *) ? qt_mac_toQColor([NSColor placeholderTextColor]) : QColor(127, 127, 127);
     palette->setColor(QPalette::Active, QPalette::PlaceholderText, qc);
     palette->setColor(QPalette::Inactive, QPalette::PlaceholderText, qc);
     palette->setColor(QPalette::Disabled, QPalette::PlaceholderText, qc);
 
-    qc = qt_mac_toQColor([NSColor controlAccentColor]);
-    palette->setColor(QPalette::Accent, qc);
+    if (@available(macOS 10.14, *)) {
+        qc = qt_mac_toQColor([NSColor controlAccentColor]);
+        palette->setColor(QPalette::Accent, qc);
+    } else {
+        palette->setColor(QPalette::Accent, QColor(0, 122, 255));
+    }
 
     return palette;
 }
@@ -155,9 +162,13 @@ static QHash<QPlatformTheme::Palette, QPalette*> qt_mac_createRolePalettes()
         if (mac_widget_colors[i].paletteRole == QPlatformTheme::MenuPalette
                 || mac_widget_colors[i].paletteRole == QPlatformTheme::MenuBarPalette) {
             // Cheap approximation for NSVisualEffectView (see deprecation note for selectedMenuItemTextColor)
-            auto selectedMenuItemColor = [[NSColor controlAccentColor] highlightWithLevel:0.3];
+            NSColor *selectedMenuItemColor;
+            if (@available(macOS 10.14, *))
+                selectedMenuItemColor = [[NSColor controlAccentColor] highlightWithLevel:0.3];
+            else
+                selectedMenuItemColor = [NSColor selectedMenuItemColor];
             pal.setBrush(QPalette::Highlight, qt_mac_toQColor(selectedMenuItemColor));
-            qc = qt_mac_toQColor([NSColor labelColor]);
+            qc = @available(macOS 10.10, *) ? qt_mac_toQColor([NSColor labelColor]) : qt_mac_toQColor([NSColor textColor]);
             pal.setBrush(QPalette::ButtonText, qc);
             pal.setBrush(QPalette::Text, qc);
             qc = qt_mac_toQColor([NSColor selectedMenuItemTextColor]);
@@ -176,10 +187,17 @@ static QHash<QPlatformTheme::Palette, QPalette*> qt_mac_createRolePalettes()
         } else if (mac_widget_colors[i].paletteRole == QPlatformTheme::ItemViewPalette) {
             NSArray<NSColor *> *baseColors = nil;
             NSColor *activeHighlightColor = nil;
-            baseColors = [NSColor alternatingContentBackgroundColors];
-            activeHighlightColor = [NSColor selectedContentBackgroundColor];
-            pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
-                         qt_mac_toQBrush([NSColor unemphasizedSelectedTextColor]));
+            if (@available(macOS 10.14, *)) {
+                baseColors = [NSColor alternatingContentBackgroundColors];
+                activeHighlightColor = [NSColor selectedContentBackgroundColor];
+                pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+                             qt_mac_toQBrush([NSColor unemphasizedSelectedTextColor]));
+            } else {
+                baseColors = [NSColor controlAlternatingRowBackgroundColors];
+                activeHighlightColor = [NSColor alternateSelectedControlColor];
+                pal.setBrush(QPalette::Inactive, QPalette::HighlightedText,
+                             pal.brush(QPalette::Active, QPalette::HighlightedText));
+            }
             pal.setBrush(QPalette::Base, qt_mac_toQBrush(baseColors[0]));
             pal.setBrush(QPalette::AlternateBase, qt_mac_toQBrush(baseColors[1]));
             pal.setBrush(QPalette::Active, QPalette::Highlight,
@@ -200,7 +218,7 @@ static QHash<QPlatformTheme::Palette, QPalette*> qt_mac_createRolePalettes()
             pal.setBrush(QPalette::Disabled, QPalette::Base,
                          pal.brush(QPalette::Active, QPalette::Base));
         } else if (mac_widget_colors[i].paletteRole == QPlatformTheme::LabelPalette) {
-            qc = qt_mac_toQColor([NSColor labelColor]);
+            qc = @available(macOS 10.10, *) ? qt_mac_toQColor([NSColor labelColor]) : qt_mac_toQColor([NSColor textColor]);
             pal.setBrush(QPalette::Inactive, QPalette::ToolTipText, qc);
         }
         palettes.insert(mac_widget_colors[i].paletteRole, &pal);
@@ -213,10 +231,13 @@ const char *QCocoaTheme::name = "cocoa";
 QCocoaTheme::QCocoaTheme()
     : m_systemPalette(nullptr)
 {
-    m_appearanceObserver = QMacKeyValueObserver(NSApp, @"effectiveAppearance", [this] {
-        NSAppearance.currentAppearance = NSApp.effectiveAppearance;
-        handleSystemThemeChange();
-    });
+    if (@available(macOS 10.14, *)) {
+        m_appearanceObserver = QMacKeyValueObserver(NSApp, @"effectiveAppearance", [this] {
+            if (@available(macOS 10.14, *))
+                NSAppearance.currentAppearance = NSApp.effectiveAppearance;
+            handleSystemThemeChange();
+        });
+    }
 
     m_systemColorObserver = QMacNotificationObserver(nil,
         NSSystemColorsDidChangeNotification, [this] {
@@ -479,19 +500,21 @@ Qt::ColorScheme QCocoaTheme::colorScheme() const
 
 void QCocoaTheme::requestColorScheme(Qt::ColorScheme scheme)
 {
-    NSAppearance *appearance = nil;
-    switch (scheme) {
-    case Qt::ColorScheme::Dark:
-        appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
-        break;
-    case Qt::ColorScheme::Light:
-        appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
-        break;
-    case Qt::ColorScheme::Unknown:
-        break;
+    if (@available(macOS 10.14, *)) {
+        NSAppearance *appearance = nil;
+        switch (scheme) {
+        case Qt::ColorScheme::Dark:
+            appearance = [NSAppearance appearanceNamed:NSAppearanceNameDarkAqua];
+            break;
+        case Qt::ColorScheme::Light:
+            appearance = [NSAppearance appearanceNamed:NSAppearanceNameAqua];
+            break;
+        case Qt::ColorScheme::Unknown:
+            break;
+        }
+        if (appearance != NSApp.effectiveAppearance)
+            NSApplication.sharedApplication.appearance = appearance;
     }
-    if (appearance != NSApp.effectiveAppearance)
-        NSApplication.sharedApplication.appearance = appearance;
 }
 
 /*

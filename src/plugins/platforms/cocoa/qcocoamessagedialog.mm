@@ -127,13 +127,13 @@ bool QCocoaMessageDialog::show(Qt::WindowFlags windowFlags, Qt::WindowModality w
     }
     case QMessageDialogOptions::Information:
     case QMessageDialogOptions::Question:
-        [m_alert setAlertStyle:NSAlertStyleInformational];
+        [m_alert setAlertStyle:NSInformationalAlertStyle];
         break;
     case QMessageDialogOptions::Warning:
-        [m_alert setAlertStyle:NSAlertStyleWarning];
+        [m_alert setAlertStyle:NSWarningAlertStyle];
         break;
     case QMessageDialogOptions::Critical:
-        [m_alert setAlertStyle:NSAlertStyleCritical];
+        [m_alert setAlertStyle:NSCriticalAlertStyle];
         break;
     }
 
@@ -170,7 +170,8 @@ bool QCocoaMessageDialog::show(Qt::WindowFlags windowFlags, Qt::WindowModality w
         else if ([button.keyEquivalent isEqualToString:@"\e"])
             button.keyEquivalent = @"";
 
-        button.hasDestructiveAction = role == DestructiveRole;
+        if (@available(macOS 10.12, *))
+            button.hasDestructiveAction = role == DestructiveRole;
 
         // The NSModalResponse of showing an NSAlert normally depends on the order of the
         // button that was clicked, starting from the right with NSAlertFirstButtonReturn (1000),

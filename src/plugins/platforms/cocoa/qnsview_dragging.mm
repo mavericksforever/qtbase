@@ -16,7 +16,8 @@
                    NSPasteboardTypeRTF, NSPasteboardTypeTabularText, NSPasteboardTypeFont,
                    NSPasteboardTypeRuler, NSFileContentsPboardType,
                    NSPasteboardTypeRTFD , NSPasteboardTypeHTML,
-                   NSPasteboardTypeURL, NSPasteboardTypePDF, UTTypeVCard.identifier,
+                   NSPasteboardTypeURL, NSPasteboardTypePDF,
+                   @available(macOS 11.0, *) ? UTTypeVCard.identifier : @"public.vcard",
                    (NSString *)kPasteboardTypeFileURLPromise,
                    NSPasteboardTypeMultipleTextSelection, mimeTypeGeneric]];
 

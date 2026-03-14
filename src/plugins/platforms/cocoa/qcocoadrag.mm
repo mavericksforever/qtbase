@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR LGPL-3.0-only OR GPL-2.0-only OR GPL-3.0-only
 
 #include <AppKit/AppKit.h>
+#if __has_include(<UniformTypeIdentifiers/UTCoreTypes.h>)
 #include <UniformTypeIdentifiers/UTCoreTypes.h>
+#endif
 
 #include "qcocoadrag.h"
 #include "qmacclipboard.h"
@@ -162,7 +164,12 @@ bool QCocoaDrag::maybeDragMultipleItems()
     for (NSPasteboardItem *item in dragBoard.pasteboardItems) {
         bool isUrl = false;
         for (NSPasteboardType type in item.types) {
-            if ([type isEqualToString:UTTypeFileURL.identifier]) {
+            NSString *fileURLType;
+            if (@available(macOS 11.0, *))
+                fileURLType = UTTypeFileURL.identifier;
+            else
+                fileURLType = @"public.file-url";
+            if ([type isEqualToString:fileURLType]) {
                 isUrl = true;
                 break;
             }

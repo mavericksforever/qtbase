@@ -350,12 +350,14 @@ class AppearanceSync {
 public:
     AppearanceSync()
     {
-        if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::MacOSMojave
-            && !isDarkMode()) {
-            auto requiredAppearanceName = NSApplication.sharedApplication.effectiveAppearance.name;
-            if (![NSAppearance.currentAppearance.name isEqualToString:requiredAppearanceName]) {
-                previous = NSAppearance.currentAppearance;
-                NSAppearance.currentAppearance = [NSAppearance appearanceNamed:requiredAppearanceName];
+        if (@available(macOS 10.14, *)) {
+            if (QOperatingSystemVersion::current() >= QOperatingSystemVersion::MacOSMojave
+                && !isDarkMode()) {
+                auto requiredAppearanceName = NSApplication.sharedApplication.effectiveAppearance.name;
+                if (![NSAppearance.currentAppearance.name isEqualToString:requiredAppearanceName]) {
+                    previous = NSAppearance.currentAppearance;
+                    NSAppearance.currentAppearance = [NSAppearance appearanceNamed:requiredAppearanceName];
+                }
             }
         }
     }
