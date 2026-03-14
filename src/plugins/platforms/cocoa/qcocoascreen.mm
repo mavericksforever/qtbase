@@ -495,40 +495,41 @@ Qt::ScreenOrientation QCocoaScreen::orientation() const
 QWindow *QCocoaScreen::topLevelAt(const QPoint &point) const
 {
     __block QWindow *window = nullptr;
-    [NSApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
-        usingBlock:^(NSWindow *nsWindow, BOOL *stop) {
-            if (!nsWindow)
-                return;
+    auto checkWindow = ^(NSWindow *nsWindow) {
+        if (!nsWindow)
+            return;
+        if (![nsWindow conformsToProtocol:@protocol(QNSWindowProtocol)])
+            return;
+        QCocoaWindow *cocoaWindow = qnsview_cast(nsWindow.contentView).platformWindow;
+        if (!cocoaWindow)
+            return;
+        QWindow *w = cocoaWindow->window();
+        if (!w->isVisible())
+            return;
+        auto nativeGeometry = QHighDpi::toNativePixels(w->geometry(), w);
+        if (!nativeGeometry.contains(point))
+            return;
+        QRegion mask = QHighDpi::toNativeLocalPosition(w->mask(), w);
+        if (!mask.isEmpty() && !mask.contains(point - nativeGeometry.topLeft()))
+            return;
+        window = w;
+    };
 
-            // Continue the search if the window does not belong to Qt
-            if (![nsWindow conformsToProtocol:@protocol(QNSWindowProtocol)])
-                return;
-
-            QCocoaWindow *cocoaWindow = qnsview_cast(nsWindow.contentView).platformWindow;
-            if (!cocoaWindow)
-                return;
-
-            QWindow *w = cocoaWindow->window();
-            if (!w->isVisible())
-                return;
-
-            auto nativeGeometry = QHighDpi::toNativePixels(w->geometry(), w);
-            if (!nativeGeometry.contains(point))
-                return;
-
-            QRegion mask = QHighDpi::toNativeLocalPosition(w->mask(), w);
-            if (!mask.isEmpty() && !mask.contains(point - nativeGeometry.topLeft()))
-                return;
-
-            window = w;
-
-            // Continue the search if the window is not a top-level window
-            if (!window->isTopLevel())
-                return;
-
-            *stop = true;
+    if (@available(macOS 10.12, *)) {
+        [NSApp enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
+            usingBlock:^(NSWindow *nsWindow, BOOL *stop) {
+                checkWindow(nsWindow);
+                if (window && window->isTopLevel())
+                    *stop = true;
+            }
+        ];
+    } else {
+        for (NSWindow *nsWindow in [NSApp orderedWindows]) {
+            checkWindow(nsWindow);
+            if (window && window->isTopLevel())
+                break;
         }
-    ];
+    }
 
     return window;
 }

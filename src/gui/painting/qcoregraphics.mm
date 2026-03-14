@@ -173,7 +173,7 @@ QPixmap qt_mac_toQPixmap(const NSImage *image, const QSizeF &size)
     QMacCGContext ctx(&pixmap);
     if (!ctx)
         return QPixmap();
-    NSGraphicsContext *gc = [NSGraphicsContext graphicsContextWithCGContext:ctx flipped:YES];
+    NSGraphicsContext *gc = [NSGraphicsContext graphicsContextWithGraphicsPort:ctx flipped:YES];
     if (!gc)
         return QPixmap();
     [NSGraphicsContext saveGraphicsState];
@@ -306,16 +306,40 @@ QBrush qt_mac_toQBrush(const NSColor *color, QPalette::ColorGroup colorGroup)
 {
     QBrush qtBrush;
 
-    // On macOS < 10.13, NSDynamicSystemColor doesn't respond to 'type'
-    // and many NSColor introspection methods may crash. Fall back to simple conversion.
+    // On macOS < 10.13, NSDynamicSystemColor doesn't respond to 'type' or 'className'.
+    // Use @try/@catch to safely handle introspection, falling back to colorSpace conversion.
     if (!(@available(macOS 10.13, *))) {
-        const NSColor *rgbColor = [color colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
-        if (rgbColor) {
-            CGFloat red = 0, green = 0, blue = 0, alpha = 0;
-            [rgbColor getRed:&red green:&green blue:&blue alpha:&alpha];
-            qtBrush.setStyle(Qt::SolidPattern);
-            qtBrush.setColor(QColor::fromRgbF(red, green, blue, alpha));
-        }
+        @try {
+            // Try pattern color first
+            if ([[color colorSpaceName] isEqualToString:NSPatternColorSpace]) {
+                NSImage *patternImage = color.patternImage;
+                const QSizeF sz(patternImage.size.width, patternImage.size.height);
+                qtBrush.setTexture(qt_mac_toQPixmap(patternImage, sz));
+                return qtBrush;
+            }
+        } @catch (NSException *) {}
+
+        @try {
+            // Try CGColor path (works for gradient pattern colors)
+            CGColorRef cgColor = color.CGColor;
+            if (cgColor) {
+                qtBrush.setStyle(Qt::SolidPattern);
+                qtBrush.setColor(qt_mac_toQColor(cgColor));
+                return qtBrush;
+            }
+        } @catch (NSException *) {}
+
+        // Fallback: convert to RGB
+        @try {
+            const NSColor *rgbColor = [color colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
+            if (rgbColor) {
+                CGFloat red = 0, green = 0, blue = 0, alpha = 0;
+                [rgbColor getRed:&red green:&green blue:&blue alpha:&alpha];
+                qtBrush.setStyle(Qt::SolidPattern);
+                qtBrush.setColor(QColor::fromRgbF(red, green, blue, alpha));
+            }
+        } @catch (NSException *) {}
+
         return qtBrush;
     }
 

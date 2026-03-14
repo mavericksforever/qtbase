@@ -37,7 +37,7 @@ Q_GLOBAL_STATIC(QCocoaTabletDeviceMap, devicesInProximity)
 
     // We use devicesInProximity because deviceID is typically 0,
     // so QInputDevicePrivate::fromId() won't work.
-    const auto deviceId = theEvent.deviceID;
+    const auto deviceId = safeDeviceID(theEvent);
     const auto *device = devicesInProximity->value(deviceId);
     if (!device && deviceId == 0) {
         // Application started up with stylus in proximity already, so we missed the proximity event?
@@ -169,7 +169,7 @@ static const QPointingDevice *tabletToolInstance(NSEvent *theEvent)
     }
 
     const auto uniqueID = QPointingDeviceUniqueId::fromNumericId(uid);
-    auto windowSystemId = theEvent.deviceID;
+    auto windowSystemId = safeDeviceID(theEvent);
     const QPointingDevice *ret = QPointingDevicePrivate::queryTabletDevice(device, pointerType, uniqueID, caps, windowSystemId);
     if (!ret) {
         // TODO get the device name? (first argument)
@@ -189,7 +189,7 @@ static const QPointingDevice *tabletToolInstance(NSEvent *theEvent)
         return [super tabletProximity:theEvent];
 
     const ulong timestamp = theEvent.timestamp * 1000;
-    const qint64 windowSystemId = theEvent.deviceID;
+    const qint64 windowSystemId = safeDeviceID(theEvent);
     const QPointingDevice *device = tabletToolInstance(theEvent);
     // TODO which window?
     QWindowSystemInterface::handleTabletEnterLeaveProximityEvent(nullptr, timestamp, device, theEvent.isEnteringProximity);

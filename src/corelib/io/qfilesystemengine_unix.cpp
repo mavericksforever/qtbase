@@ -1554,10 +1554,14 @@ bool QFileSystemEngine::moveFileToTrash(const QFileSystemEntry &source,
 bool QFileSystemEngine::copyFile(const QFileSystemEntry &source, const QFileSystemEntry &target, QSystemError &error)
 {
 #if defined(Q_OS_DARWIN)
-    if (::clonefile(source.nativeFilePath().constData(),
-                    target.nativeFilePath().constData(), 0) == 0)
-        return true;
-    error = QSystemError(errno, QSystemError::StandardLibraryError);
+    if (__builtin_available(macOS 10.12, *)) {
+        if (::clonefile(source.nativeFilePath().constData(),
+                        target.nativeFilePath().constData(), 0) == 0)
+            return true;
+        error = QSystemError(errno, QSystemError::StandardLibraryError);
+        return false;
+    }
+    error = QSystemError(ENOSYS, QSystemError::StandardLibraryError);
     return false;
 #else
     Q_UNUSED(source);

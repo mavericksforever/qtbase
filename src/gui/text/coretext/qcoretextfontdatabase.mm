@@ -377,7 +377,7 @@ static void getFontDescription(CTFontDescriptorRef font, FontDescription *fd)
         }
     }
 
-    if (styles) {
+    if (styles && CFDictionaryGetCount(styles) > 0) {
         if (CFNumberRef weightValue = (CFNumberRef) CFDictionaryGetValue(styles, kCTFontWeightTrait)) {
             double normalizedWeight;
             if (CFNumberGetValue(weightValue, kCFNumberFloat64Type, &normalizedWeight))
@@ -741,7 +741,20 @@ QStringList QCoreTextFontDatabase::addApplicationFont(const QByteArray &fontData
 
     if (!fontData.isEmpty()) {
         QCFType<CFDataRef> fontDataReference = fontData.toRawCFData();
-        if (QCFType<CFArrayRef> descriptors = CTFontManagerCreateFontDescriptorsFromData(fontDataReference)) {
+        QCFType<CFArrayRef> descriptors;
+        if (__builtin_available(macOS 10.13, *))
+            descriptors = CTFontManagerCreateFontDescriptorsFromData(fontDataReference);
+        else {
+            // Fallback: singular version available since 10.6
+            CTFontDescriptorRef desc = CTFontManagerCreateFontDescriptorFromData(fontDataReference);
+            if (desc) {
+                CFMutableArrayRef arr = CFArrayCreateMutable(kCFAllocatorDefault, 1, &kCFTypeArrayCallBacks);
+                CFArrayAppendValue(arr, desc);
+                CFRelease(desc);
+                descriptors = arr;
+            }
+        }
+        if (descriptors) {
             CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
             const int count = CFArrayGetCount(descriptors);
 
@@ -918,6 +931,8 @@ void QCoreTextFontDatabase::populateThemeFonts()
     for (long f = QPlatformTheme::SystemFont; f < QPlatformTheme::NFonts; f++) {
         QPlatformTheme::Font themeFont = static_cast<QPlatformTheme::Font>(f);
         QCFType<CTFontDescriptorRef> fontDescriptor = fontDescriptorFromTheme(themeFont);
+        if (!fontDescriptor)
+            continue;
         FontDescription fd;
         getFontDescription(fontDescriptor, &fd);
 

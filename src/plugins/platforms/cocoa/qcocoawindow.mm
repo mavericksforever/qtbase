@@ -302,19 +302,20 @@ QMargins QCocoaWindow::safeAreaMargins() const
     // the current view (by setting additionalSafeAreaInsets). If the window
     // uses NSWindowStyleMaskFullSizeContentView this also includes the area
     // of the view covered by the title bar.
-    QMarginsF viewSafeAreaMargins = {
-        m_view.safeAreaInsets.left,
-        m_view.safeAreaInsets.top,
-        m_view.safeAreaInsets.right,
-        m_view.safeAreaInsets.bottom
-    };
+    QMarginsF viewSafeAreaMargins;
+    if (@available(macOS 11.0, *)) {
+        viewSafeAreaMargins = {
+            m_view.safeAreaInsets.left,
+            m_view.safeAreaInsets.top,
+            m_view.safeAreaInsets.right,
+            m_view.safeAreaInsets.bottom
+        };
+    }
 
-    // The screen's safe area insets represent the distances from the screen's
-    // edges at which content isn't obscured. The view's safe area margins do
-    // not include the screen's insets automatically, so we need to manually
-    // merge them.
     auto screenRect = m_view.window.screen.frame;
-    auto screenInsets = m_view.window.screen.safeAreaInsets;
+    NSEdgeInsets screenInsets = {};
+    if (@available(macOS 12.0, *))
+        screenInsets = m_view.window.screen.safeAreaInsets;
     auto screenRelativeViewBounds = QCocoaScreen::mapFromNative(
         [m_view.window convertRectToScreen:
             [m_view convertRect:m_view.bounds toView:nil]]
@@ -627,8 +628,10 @@ NSUInteger QCocoaWindow::windowStyleMask(Qt::WindowFlags flags)
     // Don't wipe existing states
     if (m_view.window.styleMask & NSWindowStyleMaskFullScreen)
         styleMask |= NSWindowStyleMaskFullScreen;
-    if (m_view.window.styleMask & NSWindowStyleMaskFullSizeContentView)
-        styleMask |= NSWindowStyleMaskFullSizeContentView;
+    if (@available(macOS 10.10, *)) {
+        if (m_view.window.styleMask & NSWindowStyleMaskFullSizeContentView)
+            styleMask |= NSWindowStyleMaskFullSizeContentView;
+    }
 
     return styleMask;
 }
@@ -1884,7 +1887,8 @@ QCocoaNSWindow *QCocoaWindow::createNSWindow(bool shouldBePanel)
 
     nsWindow.restorable = NO;
     nsWindow.level = windowLevel(flags);
-    nsWindow.tabbingMode = NSWindowTabbingModeDisallowed;
+    if (@available(macOS 10.12, *))
+        nsWindow.tabbingMode = NSWindowTabbingModeDisallowed;
 
     if (shouldBePanel) {
         // Qt::Tool windows hide on app deactivation, unless Qt::WA_MacAlwaysShowToolWindow is set
@@ -2021,7 +2025,7 @@ void QCocoaWindow::applyContentBorderThickness(NSWindow *window)
     if (!m_drawContentBorderGradient) {
         window.styleMask = window.styleMask & ~NSWindowStyleMaskTexturedBackground;
         [window.contentView.superview setNeedsDisplay:YES];
-        window.titlebarAppearsTransparent = NO;
+        if ([window respondsToSelector:@selector(setTitlebarAppearsTransparent:)]) window.titlebarAppearsTransparent = NO;
         return;
     }
 
@@ -2046,7 +2050,7 @@ void QCocoaWindow::applyContentBorderThickness(NSWindow *window)
     int effectiveBottomContentBorderThickness = 0;
 
     [window setStyleMask:[window styleMask] | NSWindowStyleMaskTexturedBackground];
-    window.titlebarAppearsTransparent = YES;
+    if ([window respondsToSelector:@selector(setTitlebarAppearsTransparent:)]) window.titlebarAppearsTransparent = YES;
 
     // Setting titlebarAppearsTransparent to YES means that the border thickness has to account
     // for the title bar height as well, otherwise sheets will not be presented at the correct

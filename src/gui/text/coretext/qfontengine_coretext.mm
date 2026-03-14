@@ -29,16 +29,18 @@
 // These are available cross platform, exported as kCTFontWeightXXX from CoreText.framework,
 // but they are not documented and are not in public headers so are private API and exposed
 // only through the NSFontWeightXXX and UIFontWeightXXX aliases in AppKit and UIKit (rdar://26109857)
+// NSFontWeight* constants are only available since macOS 10.11.
+// Use hardcoded CoreText values instead.
 #if defined(Q_OS_MACOS)
-#define kCTFontWeightUltraLight NSFontWeightUltraLight
-#define kCTFontWeightThin NSFontWeightThin
-#define kCTFontWeightLight NSFontWeightLight
-#define kCTFontWeightRegular NSFontWeightRegular
-#define kCTFontWeightMedium NSFontWeightMedium
-#define kCTFontWeightSemibold NSFontWeightSemibold
-#define kCTFontWeightBold NSFontWeightBold
-#define kCTFontWeightHeavy NSFontWeightHeavy
-#define kCTFontWeightBlack NSFontWeightBlack
+#define kCTFontWeightUltraLight ((CGFloat)-0.80)
+#define kCTFontWeightThin ((CGFloat)-0.60)
+#define kCTFontWeightLight ((CGFloat)-0.40)
+#define kCTFontWeightRegular ((CGFloat)0.0)
+#define kCTFontWeightMedium ((CGFloat)0.23)
+#define kCTFontWeightSemibold ((CGFloat)0.30)
+#define kCTFontWeightBold ((CGFloat)0.40)
+#define kCTFontWeightHeavy ((CGFloat)0.56)
+#define kCTFontWeightBlack ((CGFloat)0.62)
 #elif defined(QT_PLATFORM_UIKIT)
 #define kCTFontWeightUltraLight UIFontWeightUltraLight
 #define kCTFontWeightThin UIFontWeightThin
@@ -82,19 +84,25 @@ QFont::Weight QCoreTextFontEngine::qtWeightFromCFWeight(float value)
         } \
     }
 
-    float distance = qAbs(value - kCTFontWeightBlack);
+    // kCTFontWeight* constants were added in macOS 10.11.
+    // Use hardcoded values from CoreText documentation for older systems.
+    static const float ctBlack = 0.62f, ctHeavy = 0.56f, ctBold = 0.40f;
+    static const float ctSemibold = 0.23f, ctMedium = 0.12f, ctRegular = 0.0f;
+    static const float ctLight = -0.24f, ctThin = -0.31f, ctUltraLight = -0.40f;
+
+    float distance = qAbs(value - ctBlack);
     QFont::Weight ret = QFont::Black;
 
     // Compare distance to system weight to find the closest match.
     // (Note: Must go from high to low, so that midpoints are rounded up)
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightHeavy, QFont::ExtraBold);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightBold, QFont::Bold);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightSemibold, QFont::DemiBold);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightMedium, QFont::Medium);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightRegular, QFont::Normal);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightLight, QFont::Light);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightThin, QFont::ExtraLight);
-    COMPARE_WEIGHT_DISTANCE(kCTFontWeightUltraLight, QFont::Thin);
+    COMPARE_WEIGHT_DISTANCE(ctHeavy, QFont::ExtraBold);
+    COMPARE_WEIGHT_DISTANCE(ctBold, QFont::Bold);
+    COMPARE_WEIGHT_DISTANCE(ctSemibold, QFont::DemiBold);
+    COMPARE_WEIGHT_DISTANCE(ctMedium, QFont::Medium);
+    COMPARE_WEIGHT_DISTANCE(ctRegular, QFont::Normal);
+    COMPARE_WEIGHT_DISTANCE(ctLight, QFont::Light);
+    COMPARE_WEIGHT_DISTANCE(ctThin, QFont::ExtraLight);
+    COMPARE_WEIGHT_DISTANCE(ctUltraLight, QFont::Thin);
 
 #undef COMPARE_WEIGHT_DISTANCE
 

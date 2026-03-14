@@ -16,10 +16,10 @@
                    NSPasteboardTypeRTF, NSPasteboardTypeTabularText, NSPasteboardTypeFont,
                    NSPasteboardTypeRuler, NSFileContentsPboardType,
                    NSPasteboardTypeRTFD , NSPasteboardTypeHTML,
-                   NSPasteboardTypeURL, NSPasteboardTypePDF,
+                   @"public.url", NSPasteboardTypePDF,
                    @available(macOS 11.0, *) ? UTTypeVCard.identifier : @"public.vcard",
                    (NSString *)kPasteboardTypeFileURLPromise,
-                   NSPasteboardTypeMultipleTextSelection, mimeTypeGeneric]];
+                   @"com.apple.pasteboard.multiple-text-selection", mimeTypeGeneric]];
 
     // Add custom types supported by the application
     for (const QString &customType : QMacMimeRegistry::enabledDraggedTypes())

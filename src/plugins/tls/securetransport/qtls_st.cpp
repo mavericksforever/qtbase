@@ -326,7 +326,9 @@ void TlsCryptographSecureTransport::continueHandshake()
         QTlsBackend::setNegotiatedProtocol(d, {});
 
         QCFType<CFArrayRef> cfArray;
-        const OSStatus result = SSLCopyALPNProtocols(context, &cfArray);
+        OSStatus result = errSecUnimplemented;
+        if (__builtin_available(macOS 10.13.4, *))
+            result = SSLCopyALPNProtocols(context, &cfArray);
         if (result == errSecSuccess && cfArray && CFArrayGetCount(cfArray)) {
             const int size = CFArrayGetCount(cfArray);
             QList<QString> peerProtocols(size);
@@ -710,8 +712,10 @@ bool TlsCryptographSecureTransport::initSslContext()
             // Up to the application layer to check that negotiation
             // failed, and handle this non-TLS error, we do not handle
             // the result of this call as an error:
-            if (SSLSetALPNProtocols(context, cfNames) != errSecSuccess)
-                qCWarning(lcSecureTransport) << "SSLSetALPNProtocols failed - too long protocol names?";
+            if (__builtin_available(macOS 10.13.4, *)) {
+                if (SSLSetALPNProtocols(context, cfNames) != errSecSuccess)
+                    qCWarning(lcSecureTransport) << "SSLSetALPNProtocols failed - too long protocol names?";
+            }
         }
     } else {
         qCWarning(lcSecureTransport) << "failed to allocate ALPN names array";

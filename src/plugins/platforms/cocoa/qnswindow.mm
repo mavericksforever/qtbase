@@ -82,15 +82,18 @@ NSWindow<QNSWindowProtocol> *qnswindow_cast(NSWindow *window)
     // Unfortunately there's no NSWindowListOrderedBackToFront,
     // so we have to manually reverse the order using an array.
     NSMutableArray<NSWindow *> *windows = [[NSMutableArray<NSWindow *> new] autorelease];
-    [application enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
-        usingBlock:^(NSWindow *window, BOOL *) {
-            // For some reason AppKit will give us nil-windows, skip those
-            if (!window)
-                return;
-
+    if (@available(macOS 10.12, *)) {
+        [application enumerateWindowsWithOptions:NSWindowListOrderedFrontToBack
+            usingBlock:^(NSWindow *window, BOOL *) {
+                if (!window)
+                    return;
+                [windows addObject:window];
+            }
+        ];
+    } else {
+        for (NSWindow *window in [application windows])
             [windows addObject:window];
-        }
-    ];
+    }
 
     windowEnumerator = windows.reverseObjectEnumerator;
 

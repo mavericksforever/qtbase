@@ -5,6 +5,12 @@
 
 using namespace Qt::StringLiterals;
 
+static qint64 safeDeviceID(NSEvent *event)
+{
+    @try { return event.deviceID; }
+    @catch (NSException *) { return 0; }
+}
+
 static const QPointingDevice *pointingDeviceFor(qint64 deviceID)
 {
     // macOS will in many cases not report a deviceID (0 value).
@@ -125,7 +131,7 @@ static const QPointingDevice *pointingDeviceFor(qint64 deviceID)
         button = Qt::RightButton;
     const auto eventType = cocoaEvent2QtMouseEvent(theEvent);
 
-    const QPointingDevice *device = pointingDeviceFor(theEvent.deviceID);
+    const QPointingDevice *device = pointingDeviceFor(safeDeviceID(theEvent));
     Q_ASSERT(device);
 
     if (eventType == QEvent::MouseMove)
@@ -747,7 +753,7 @@ static const QPointingDevice *pointingDeviceFor(qint64 deviceID)
         << " pixelDelta=" << pixelDelta << " angleDelta=" << angleDelta
         << (isInverted ? " inverted=true" : "");
 
-    const QPointingDevice *device = pointingDeviceFor(theEvent.deviceID);
+    const QPointingDevice *device = pointingDeviceFor(safeDeviceID(theEvent));
     Q_ASSERT(device);
 
     if (theEvent.hasPreciseScrollingDeltas) {

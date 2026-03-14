@@ -279,7 +279,9 @@ auto *loadImage(const QString &iconName)
     });
     NSString *systemIconName = it != std::end(iconMap) ? it->second : iconName.toNSString();
 #if defined(Q_OS_MACOS)
-    return [NSImage imageWithSystemSymbolName:systemIconName accessibilityDescription:nil];
+    if (@available(macOS 11.0, *))
+        return [NSImage imageWithSystemSymbolName:systemIconName accessibilityDescription:nil];
+    return [NSImage imageNamed:systemIconName]; // fallback to named image
 #elif defined(QT_PLATFORM_UIKIT)
     return [UIImage systemImageNamed:systemIconName];
 #endif
@@ -359,11 +361,16 @@ namespace {
 #if defined(Q_OS_MACOS)
 auto *configuredImage(const NSImage *image, const QColor &color)
 {
-    auto *config = [NSImageSymbolConfiguration configurationWithPointSize:48
-                                               weight:NSFontWeightRegular
-                                               scale:NSImageSymbolScaleLarge];
-
-    NSImage *configuredImage = [image imageWithSymbolConfiguration:config];
+    NSImage *configuredImage = nil;
+    if (@available(macOS 11.0, *)) {
+        auto *config = [[NSClassFromString(@"NSImageSymbolConfiguration")
+                          configurationWithPointSize:48
+                          weight:(NSFontWeight)0.0
+                          scale:NSImageSymbolScaleLarge] autorelease];
+        configuredImage = [image imageWithSymbolConfiguration:config];
+    }
+    if (!configuredImage)
+        configuredImage = [[image copy] autorelease];
 
     auto *primaryColor = [NSColor colorWithSRGBRed:color.redF()
                                              green:color.greenF()
@@ -446,7 +453,7 @@ void QAppleIconEngine::paint(QPainter *painter, const QRect &rect, QIcon::Mode m
     QMacCGContext ctx(painter);
 
 #if defined(Q_OS_MACOS)
-    NSGraphicsContext *gc = [NSGraphicsContext graphicsContextWithCGContext:ctx flipped:YES];
+    NSGraphicsContext *gc = [NSGraphicsContext graphicsContextWithGraphicsPort:ctx flipped:YES];
     [NSGraphicsContext saveGraphicsState];
     [NSGraphicsContext setCurrentContext:gc];
 

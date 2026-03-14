@@ -533,7 +533,8 @@ void QCALayerBackingStore::finalizeBackBuffer()
 
     qCDebug(lcQpaBackingStore) << "Finalizing back buffer with dirty region" << m_buffers.back()->dirtyRegion;
 
-    if (m_buffers.back() != m_buffers.front()) {
+    if (m_buffers.front() && m_buffers.back() != m_buffers.front()
+        && !m_buffers.back()->asImage()->paintingActive()) {
         m_buffers.back()->lock(QPlatformGraphicsBuffer::SWWriteAccess);
         blitBuffer(m_buffers.front().get(), m_buffers.back()->dirtyRegion, m_buffers.back().get());
         m_buffers.back()->unlock();
@@ -574,11 +575,24 @@ void QCALayerBackingStore::blitBuffer(GraphicsBuffer *sourceBuffer, const QRegio
 
     sourceBuffer->lock(QPlatformGraphicsBuffer::SWReadAccess);
     const QImage *sourceImage = sourceBuffer->asImage();
+    if (!sourceImage || sourceImage->isNull()) {
+        sourceBuffer->unlock();
+        return;
+    }
 
     const QRect sourceBufferBounds(QPoint(0, 0), sourceBuffer->size());
     const qreal sourceDevicePixelRatio = sourceImage->devicePixelRatio();
 
-    QPainter painter(destinationBuffer->asImage());
+    QImage *destImage = destinationBuffer->asImage();
+    if (!destImage || destImage->isNull() || destImage->paintingActive()) {
+        sourceBuffer->unlock();
+        return;
+    }
+    QPainter painter(destImage);
+    if (!painter.isActive()) {
+        sourceBuffer->unlock();
+        return;
+    }
     painter.setCompositionMode(QPainter::CompositionMode_Source);
 
     // Let painter operate in device pixels, to make it easier to compare coordinates

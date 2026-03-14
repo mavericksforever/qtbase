@@ -46,7 +46,7 @@ class QCocoaColorPicker : public QPlatformServiceColorPicker
 public:
     QCocoaColorPicker() {
         if (@available(macOS 10.15, *))
-            m_colorSampler = [NSColorSampler new];
+            m_colorSampler = [[NSClassFromString(@"NSColorSampler") new] autorelease];
     }
     ~QCocoaColorPicker() {
         if (m_colorSampler)

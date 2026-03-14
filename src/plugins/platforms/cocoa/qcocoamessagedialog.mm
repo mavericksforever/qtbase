@@ -8,6 +8,27 @@
 #include "qcocoaeventdispatcher.h"
 
 #include <QtCore/qmetaobject.h>
+#include <objc/runtime.h>
+#include <AppKit/AppKit.h>
+
+// On macOS < 10.12, NSButton doesn't have setControlSize: directly.
+// AppKit's NSAlert internally calls it on buttons, causing a crash.
+// Provide it via a category that forwards to the cell.
+@implementation NSButton (MavericksCompat)
+- (void)qt_setControlSizeCompat:(NSControlSize)size
+{
+    [[self cell] setControlSize:size];
+}
+@end
+
+static void __attribute__((constructor)) installControlSizeCompat()
+{
+    if (![NSButton instancesRespondToSelector:@selector(setControlSize:)]) {
+        Method m = class_getInstanceMethod([NSButton class], @selector(qt_setControlSizeCompat:));
+        class_addMethod([NSButton class], @selector(setControlSize:),
+                        method_getImplementation(m), method_getTypeEncoding(m));
+    }
+}
 #include <QtCore/qscopedvaluerollback.h>
 #include <QtCore/qtimer.h>
 
