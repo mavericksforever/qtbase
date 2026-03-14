@@ -55,6 +55,24 @@ int __availability_version_check(uint32_t count, const uint32_t versions[])
 
 #endif // 101500
 
+// openat (exists on 10.10+, missing on 10.9)
+#include <stdarg.h>
+extern "C" __attribute__((visibility("default")))
+int openat(int dirfd, const char *path, int flags, ...)
+{
+    // If dirfd is AT_FDCWD, just use open()
+    if (dirfd == AT_FDCWD) {
+        va_list ap;
+        va_start(ap, flags);
+        mode_t mode = va_arg(ap, int);
+        va_end(ap);
+        return open(path, flags, mode);
+    }
+    // For other dirfd values, not supported on 10.9
+    errno = ENOSYS;
+    return -1;
+}
+
 // __ulock_wait2 (macOS 11+) and __ulock_wake (10.12+) — used by libc++ mutex
 // Provide stubs that fall back to usleep-based spinning
 #include <unistd.h>
