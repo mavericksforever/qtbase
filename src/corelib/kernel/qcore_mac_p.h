@@ -254,6 +254,9 @@ private:
 
 #if !defined(QT_BOOTSTRAPPED)
 
+// os_activity API requires macOS 10.10+
+#if __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
+
 QT_END_NAMESPACE
 #include <os/activity.h>
 QT_BEGIN_NAMESPACE
@@ -322,6 +325,22 @@ QT_MAC_WEAK_IMPORT(_os_activity_current);
 #define QT_APPLE_LOG_ACTIVITY(...) QT_OVERLOADED_MACRO(QT_APPLE_LOG_ACTIVITY, __VA_ARGS__)
 
 #define QT_APPLE_SCOPED_LOG_ACTIVITY(...) QAppleLogActivity scopedLogActivity = QT_APPLE_LOG_ACTIVITY(__VA_ARGS__).enter();
+
+#else // macOS < 10.10 — no os_activity support
+
+class Q_CORE_EXPORT QAppleLogActivity
+{
+public:
+    QAppleLogActivity() {}
+    QAppleLogActivity &&enter() { return std::move(*this); }
+    void leave() {}
+};
+
+#define QT_APPLE_LOG_ACTIVITY_WITH_PARENT(...) QAppleLogActivity()
+#define QT_APPLE_LOG_ACTIVITY(...) QAppleLogActivity()
+#define QT_APPLE_SCOPED_LOG_ACTIVITY(...) QAppleLogActivity scopedLogActivity;
+
+#endif // __MAC_OS_X_VERSION_MIN_REQUIRED >= 101000
 
 #endif // !defined(QT_BOOTSTRAPPED)
 

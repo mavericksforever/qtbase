@@ -42,6 +42,11 @@ if(NOT QT_SYNC_HEADERS_AT_CONFIGURE_TIME)
         SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp"
     )
+    # std::filesystem requires macOS 10.15+
+    if(APPLE AND TARGET ${target_name})
+        target_compile_options(${target_name} PRIVATE -mmacosx-version-min=10.15)
+        target_link_options(${target_name} PRIVATE -mmacosx-version-min=10.15)
+    endif()
 else()
     set(config_type "")
     if(NOT QT_INTERNAL_AVOID_OVERRIDING_SYNCQT_CONFIG)

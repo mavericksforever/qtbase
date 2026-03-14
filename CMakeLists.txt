@@ -29,4 +29,9 @@ project(QtBase
 
 set(QT_BUILD_EXTRA_IDE_FILE_PATTERNS bin/* libexec/*)
 
+# macOS 10.9 (Mavericks) lacks aligned allocation support (added in 10.13)
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.13")
+    add_compile_options(-fno-aligned-allocation)
+endif()
+
 qt_internal_qtbase_build_repo()

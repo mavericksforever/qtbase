@@ -377,10 +377,7 @@ macro(qt_internal_set_qt_coord_type)
 endmacro()
 
 function(qt_internal_check_macos_host_version)
-    # macOS versions 10.14 and less don't have the implementation of std::filesystem API.
-    if(CMAKE_HOST_APPLE AND CMAKE_HOST_SYSTEM_VERSION VERSION_LESS "19.0.0")
-        message(FATAL_ERROR "macOS versions less than 10.15 are not supported for building Qt.")
-    endif()
+    # No host version restriction for Mavericks port
 endfunction()
 
 function(qt_internal_setup_tool_path_command)
