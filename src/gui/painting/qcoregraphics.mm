@@ -232,31 +232,40 @@ QColor qt_mac_toQColor(const NSColor *color)
         return QColor();
 
     QColor qtColor;
-    switch (color.type) {
-    case NSColorTypeComponentBased: {
-        const NSColorSpace *colorSpace = [color colorSpace];
-        if (colorSpace == NSColorSpace.genericRGBColorSpace
-            && color.numberOfComponents == 4) { // rbga
-            CGFloat components[4];
-            [color getComponents:components];
-            qtColor.setRgbF(components[0], components[1], components[2], components[3]);
-            break;
-        } else if (colorSpace == NSColorSpace.genericCMYKColorSpace
-                   && color.numberOfComponents == 5) { // cmyk + alpha
-            CGFloat components[5];
-            [color getComponents:components];
-            qtColor.setCmykF(components[0], components[1], components[2], components[3], components[4]);
+    if (@available(macOS 10.13, *)) {
+        switch (color.type) {
+        case NSColorTypeComponentBased: {
+            const NSColorSpace *colorSpace = [color colorSpace];
+            if (colorSpace == NSColorSpace.genericRGBColorSpace
+                && color.numberOfComponents == 4) { // rbga
+                CGFloat components[4];
+                [color getComponents:components];
+                qtColor.setRgbF(components[0], components[1], components[2], components[3]);
+                break;
+            } else if (colorSpace == NSColorSpace.genericCMYKColorSpace
+                       && color.numberOfComponents == 5) { // cmyk + alpha
+                CGFloat components[5];
+                [color getComponents:components];
+                qtColor.setCmykF(components[0], components[1], components[2], components[3], components[4]);
+                break;
+            }
+        }
+            Q_FALLTHROUGH();
+        default: {
+            const NSColor *tmpColor = [color colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
+            CGFloat red = 0, green = 0, blue = 0, alpha = 0;
+            [tmpColor getRed:&red green:&green blue:&blue alpha:&alpha];
+            qtColor.setRgbF(red, green, blue, alpha);
             break;
         }
-    }
-        Q_FALLTHROUGH();
-    default: {
+        }
+    } else {
         const NSColor *tmpColor = [color colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
-        CGFloat red = 0, green = 0, blue = 0, alpha = 0;
-        [tmpColor getRed:&red green:&green blue:&blue alpha:&alpha];
-        qtColor.setRgbF(red, green, blue, alpha);
-        break;
-    }
+        if (tmpColor) {
+            CGFloat red = 0, green = 0, blue = 0, alpha = 0;
+            [tmpColor getRed:&red green:&green blue:&blue alpha:&alpha];
+            qtColor.setRgbF(red, green, blue, alpha);
+        }
     }
 
     return qtColor;
@@ -284,16 +293,31 @@ static bool qt_mac_isSystemColorOrInstance(const NSColor *color, NSString *color
     // We specifically do not want isKindOfClass: here
     if ([color.className isEqualToString:className]) // NSPatternColorSpace
         return true;
-    if (color.type == NSColorTypeCatalog &&
-        [color.catalogNameComponent isEqualToString:@"System"] &&
-        [color.colorNameComponent isEqualToString:colorNameComponent])
-        return true;
+    if (@available(macOS 10.13, *)) {
+        if (color.type == NSColorTypeCatalog &&
+            [color.catalogNameComponent isEqualToString:@"System"] &&
+            [color.colorNameComponent isEqualToString:colorNameComponent])
+            return true;
+    }
     return false;
 }
 
 QBrush qt_mac_toQBrush(const NSColor *color, QPalette::ColorGroup colorGroup)
 {
     QBrush qtBrush;
+
+    // On macOS < 10.13, NSDynamicSystemColor doesn't respond to 'type'
+    // and many NSColor introspection methods may crash. Fall back to simple conversion.
+    if (!(@available(macOS 10.13, *))) {
+        const NSColor *rgbColor = [color colorUsingColorSpace:NSColorSpace.genericRGBColorSpace];
+        if (rgbColor) {
+            CGFloat red = 0, green = 0, blue = 0, alpha = 0;
+            [rgbColor getRed:&red green:&green blue:&blue alpha:&alpha];
+            qtBrush.setStyle(Qt::SolidPattern);
+            qtBrush.setColor(QColor::fromRgbF(red, green, blue, alpha));
+        }
+        return qtBrush;
+    }
 
     // QTBUG-49773: This calls NSDrawMenuItemBackground to render a 1 by n gradient; could use HITheme
     if ([color.className isEqualToString:@"NSMenuItemHighlightColor"]) {
@@ -342,7 +366,12 @@ QBrush qt_mac_toQBrush(const NSColor *color, QPalette::ColorGroup colorGroup)
         return qtBrush;
     }
 
-    if (color.type == NSColorTypePattern) {
+    bool isPattern = false;
+    if (@available(macOS 10.13, *))
+        isPattern = (color.type == NSColorTypePattern);
+    else
+        isPattern = [[color colorSpaceName] isEqualToString:NSPatternColorSpace];
+    if (isPattern) {
         NSImage *patternImage = color.patternImage;
         const QSizeF sz(patternImage.size.width, patternImage.size.height);
         // FIXME: QBrush is not resolution independent (QTBUG-49774)

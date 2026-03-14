@@ -242,7 +242,10 @@ void QCocoaScreen::update(CGDirectDisplayID displayId)
     float refresh = CGDisplayModeGetRefreshRate(displayMode);
     m_refreshRate = refresh > 0 ? refresh : 60.0;
     m_rotation = CGDisplayRotation(displayId);
-    m_name = QString::fromNSString(nsScreen.localizedName);
+    if (@available(macOS 10.15, *))
+        m_name = QString::fromNSString(nsScreen.localizedName);
+    else
+        m_name = QString("Display %1").arg(m_displayId);
 
     const bool didChangeGeometry = m_geometry != previousGeometry || m_availableGeometry != previousAvailableGeometry;
 

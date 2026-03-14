@@ -321,7 +321,7 @@ QT_USE_NAMESPACE
     if (!QGuiApplication::instance())
         return NO;
 
-    if ([userActivity.activityType isEqualToString:NSUserActivityTypeBrowsingWeb]) {
+    if ([userActivity.activityType isEqualToString:@"NSUserActivityTypeBrowsingWeb"]) {
         QCocoaIntegration *cocoaIntegration = QCocoaIntegration::instance();
         Q_ASSERT(cocoaIntegration);
         return cocoaIntegration->services()->handleUrl(QUrl::fromNSURL(userActivity.webpageURL));

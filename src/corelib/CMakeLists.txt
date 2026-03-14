@@ -54,6 +54,8 @@ qt_internal_add_module(Core
         global/qfloat16.cpp global/qfloat16.h
         global/qforeach.h
         global/qfunctionpointer.h
+        global/qaligned_alloc_mavericks.cpp
+        global/qcxx17_polyfill_mavericks.cpp
         global/qglobal.cpp global/qglobal.h global/qglobal_p.h
         global/qglobalstatic.h
         global/qhooks.cpp global/qhooks_p.h
@@ -499,6 +501,15 @@ if(GCC)
         set_source_files_properties(${core_version_tagging_files}
             PROPERTIES COMPILE_OPTIONS "-fno-lto")
     endif()
+endif()
+
+# Compile the C++17 polyfill with deployment target 10.15 so the compiler emits
+# vtable/typeinfo for std::bad_optional_access etc., providing symbols missing
+# from libc++ on macOS < 10.14.
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.14")
+    set_source_files_properties(global/qcxx17_polyfill_mavericks.cpp
+        PROPERTIES COMPILE_OPTIONS "-mmacosx-version-min=10.15"
+                   SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
 qt_internal_extend_target(Core

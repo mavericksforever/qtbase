@@ -4,7 +4,9 @@
 #include "qcocoaservices.h"
 
 #include <AppKit/NSWorkspace.h>
+#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 101500
 #include <AppKit/NSColorSampler.h>
+#endif
 #include <Foundation/NSURL.h>
 
 #include <QtCore/QUrl>
@@ -42,17 +44,25 @@ bool QCocoaServices::handleUrl(const QUrl &url)
 class QCocoaColorPicker : public QPlatformServiceColorPicker
 {
 public:
-    QCocoaColorPicker() : m_colorSampler([NSColorSampler new]) {}
-    ~QCocoaColorPicker() { [m_colorSampler release]; }
+    QCocoaColorPicker() {
+        if (@available(macOS 10.15, *))
+            m_colorSampler = [NSColorSampler new];
+    }
+    ~QCocoaColorPicker() {
+        if (m_colorSampler)
+            [m_colorSampler release];
+    }
 
     void pickColor() override
     {
-        [m_colorSampler showSamplerWithSelectionHandler:^(NSColor *selectedColor) {
-            emit colorPicked(qt_mac_toQColor(selectedColor));
-        }];
+        if (@available(macOS 10.15, *)) {
+            [m_colorSampler showSamplerWithSelectionHandler:^(NSColor *selectedColor) {
+                emit colorPicked(qt_mac_toQColor(selectedColor));
+            }];
+        }
     }
 private:
-    NSColorSampler *m_colorSampler = nullptr;
+    id m_colorSampler = nil;
 };
 
 

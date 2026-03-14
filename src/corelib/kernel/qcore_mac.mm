@@ -325,8 +325,8 @@ bool qt_mac_applicationIsInDarkMode()
 {
     if (@available(macOS 10.14, *)) {
         auto appearance = [NSApp.effectiveAppearance bestMatchFromAppearancesWithNames:
-                @[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]];
-        return [appearance isEqualToString:NSAppearanceNameDarkAqua];
+                @[ @"NSAppearanceNameAqua", @"NSAppearanceNameDarkAqua" ]];
+        return [appearance isEqualToString:@"NSAppearanceNameDarkAqua"];
     }
     return false;
 }

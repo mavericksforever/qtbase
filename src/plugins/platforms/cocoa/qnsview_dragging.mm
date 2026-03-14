@@ -12,7 +12,7 @@
     NSString * const mimeTypeGeneric = @"com.trolltech.qt.MimeTypeName";
     NSMutableArray<NSString *> *supportedTypes = [NSMutableArray<NSString *> arrayWithArray:@[
                    NSPasteboardTypeColor, NSPasteboardTypeString,
-                   NSPasteboardTypeFileURL, @"com.adobe.encapsulated-postscript", NSPasteboardTypeTIFF,
+                   @"public.file-url", @"com.adobe.encapsulated-postscript", NSPasteboardTypeTIFF,
                    NSPasteboardTypeRTF, NSPasteboardTypeTabularText, NSPasteboardTypeFont,
                    NSPasteboardTypeRuler, NSFileContentsPboardType,
                    NSPasteboardTypeRTFD , NSPasteboardTypeHTML,

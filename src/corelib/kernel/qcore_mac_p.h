@@ -227,7 +227,7 @@ Q_CORE_EXPORT AppleApplication *qt_apple_sharedApplication();
 
 // --------------------------------------------------------------------------
 
-#if !defined(QT_BOOTSTRAPPED)
+#if !defined(QT_BOOTSTRAPPED) && __MAC_OS_X_VERSION_MIN_REQUIRED >= 101200
 #define QT_USE_APPLE_UNIFIED_LOGGING
 
 QT_END_NAMESPACE
