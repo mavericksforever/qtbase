@@ -54,9 +54,9 @@ qt_internal_add_plugin(QCocoaIntegrationPlugin
         ${FWCoreVideo}
         ${FWIOKit}
         ${FWIOSurface}
-        ${FWMetal}
+        "-weak_framework Metal"
         ${FWQuartzCore}
-        ${FWUniformTypeIdentifiers}
+        "-weak_framework UniformTypeIdentifiers"
         Qt::Core
         Qt::CorePrivate
         Qt::Gui

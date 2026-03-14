@@ -502,7 +502,7 @@ if(QT_FEATURE_graphicsframecapture)
         SOURCES
             util/qgraphicsframecapturemetal_p_p.h util/qgraphicsframecapturemetal.mm
         PUBLIC_LIBRARIES
-            ${FWMetal}
+            "-weak_framework Metal"
     )
 endif()
 
@@ -1058,7 +1058,7 @@ qt_internal_extend_target(Gui CONDITION QT_FEATURE_metal
     SOURCES
         rhi/qrhimetal.mm rhi/qrhimetal_p.h
     PUBLIC_LIBRARIES
-        ${FWMetal}
+        "-weak_framework Metal"
 )
 
 qt_internal_extend_target(Gui
