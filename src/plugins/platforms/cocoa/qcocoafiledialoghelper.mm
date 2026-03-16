@@ -134,8 +134,10 @@ typedef QSharedPointer<QFileDialogOptions> SharedPointerFileDialogOptions;
         // here to make sure it gets the correct value.
         m_panel.delegate = self;
 
-        if (auto *openPanel = openpanel_cast(m_panel))
-            openPanel.accessoryViewDisclosed = YES;
+        if (auto *openPanel = openpanel_cast(m_panel)) {
+            if ([openPanel respondsToSelector:@selector(setAccessoryViewDisclosed:)])
+                openPanel.accessoryViewDisclosed = YES;
+        }
 
         [self updateProperties];
     }
