@@ -4146,7 +4146,7 @@ void QMacStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPainter
                 if (@available(macOS 10.10, *))
                     separatorColor = [NSColor quaternaryLabelColor].CGColor;
                 else
-                    separatorColor = CGColorGetConstantColor(kCGColorBlack);
+                    separatorColor = [[NSColor gridColor] CGColor];
                 const QRect separatorRect = QRect(mi->rect.left(), mi->rect.center().y(), mi->rect.width(), 2);
                 p->fillRect(separatorRect, qt_mac_toQColor(separatorColor));
                 break;
