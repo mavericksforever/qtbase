@@ -4142,7 +4142,11 @@ void QMacStyle::drawControl(ControlElement ce, const QStyleOption *opt, QPainter
             }
 
             if (mi->menuItemType == QStyleOptionMenuItem::Separator) {
-                CGColorRef separatorColor = [NSColor quaternaryLabelColor].CGColor;
+                CGColorRef separatorColor;
+                if (@available(macOS 10.10, *))
+                    separatorColor = [NSColor quaternaryLabelColor].CGColor;
+                else
+                    separatorColor = CGColorGetConstantColor(kCGColorBlack);
                 const QRect separatorRect = QRect(mi->rect.left(), mi->rect.center().y(), mi->rect.width(), 2);
                 p->fillRect(separatorRect, qt_mac_toQColor(separatorColor));
                 break;
