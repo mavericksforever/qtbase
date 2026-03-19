@@ -512,6 +512,18 @@ if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.14")
                    SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
+# Link macports-legacy-support for C/POSIX polyfills on old macOS
+if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.12")
+    find_library(MACPORTS_LEGACY_SUPPORT MacportsLegacySupport
+        HINTS "${CMAKE_OSX_SYSROOT}/usr/local/lib"
+              "/Users/dima_dencep/jbr_build_env/legacy/lib"
+              "/opt/local/lib")
+    if(MACPORTS_LEGACY_SUPPORT)
+        target_link_libraries(Core PUBLIC ${MACPORTS_LEGACY_SUPPORT})
+        message(STATUS "Using macports-legacy-support: ${MACPORTS_LEGACY_SUPPORT}")
+    endif()
+endif()
+
 qt_internal_extend_target(Core
     CONDITION ( TEST_architecture_arch STREQUAL i386 ) OR
         ( TEST_architecture_arch STREQUAL x86_64 ) OR
