@@ -516,6 +516,7 @@ endif()
 if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.12")
     find_library(MACPORTS_LEGACY_SUPPORT MacportsLegacySupport
         HINTS "${CMAKE_OSX_SYSROOT}/usr/local/lib"
+              ENV MACPORTS_LEGACY_PREFIX
               "/Users/dima_dencep/jbr_build_env/legacy/lib"
               "/opt/local/lib")
     if(MACPORTS_LEGACY_SUPPORT)
