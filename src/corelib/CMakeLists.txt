@@ -520,7 +520,10 @@ if(APPLE AND CMAKE_OSX_DEPLOYMENT_TARGET VERSION_LESS "10.12")
               "/Users/dima_dencep/jbr_build_env/legacy/lib"
               "/opt/local/lib")
     if(MACPORTS_LEGACY_SUPPORT)
-        target_link_libraries(Core PUBLIC ${MACPORTS_LEGACY_SUPPORT})
+        install(FILES "${MACPORTS_LEGACY_SUPPORT}" DESTINATION "lib")
+        target_link_libraries(Core PUBLIC
+            "$<BUILD_INTERFACE:${MACPORTS_LEGACY_SUPPORT}>"
+            "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/lib/libMacportsLegacySupport.a>")
         message(STATUS "Using macports-legacy-support: ${MACPORTS_LEGACY_SUPPORT}")
     endif()
 endif()
