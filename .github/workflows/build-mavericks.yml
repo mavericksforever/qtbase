@@ -9,6 +9,7 @@ on:
 env:
   QT_VERSION: "6.8.3"
   DEPLOYMENT_TARGET: "10.9"
+  CCACHE_MAXSIZE: "1G"
 
 jobs:
   build-host:
@@ -17,13 +18,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ccache
+        run: brew install ccache ninja
+
+      - name: Cache host build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            build-host
+          key: host-qt-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', '.cmake.conf') }}
+          restore-keys: host-qt-
+
       - name: Configure host Qt
         run: |
-          mkdir build-host && cd build-host
+          mkdir -p build-host && cd build-host
           cmake .. -G Ninja \
             -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/qt6-host \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -Wno-dev
 
       - name: Build host Qt
@@ -46,30 +61,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ccache
+        run: brew install ccache ninja
+
       - name: Download host Qt
         uses: actions/download-artifact@v4
         with:
           name: qt6-host
           path: ${{ runner.temp }}/qt6-host
 
+      - name: Cache target build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/ccache
+            build
+          key: target-qt-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', '.cmake.conf') }}
+          restore-keys: target-qt-
+
+      - name: Cache macports-legacy-support
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/legacy
+          key: legacy-support-v1
+
       - name: Build macports-legacy-support
         run: |
-          git clone --depth 1 https://github.com/macports/macports-legacy-support.git /tmp/legacy
-          cd /tmp/legacy
-          make PREFIX=${{ runner.temp }}/legacy \
-            CFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
-            LDFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
-            install
+          if [ ! -f "${{ runner.temp }}/legacy/lib/libMacportsLegacySupport.a" ]; then
+            git clone --depth 1 https://github.com/macports/macports-legacy-support.git /tmp/legacy
+            cd /tmp/legacy
+            make PREFIX=${{ runner.temp }}/legacy \
+              CFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
+              LDFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
+              install
+          fi
 
       - name: Configure target Qt
         run: |
-          mkdir build && cd build
+          mkdir -p build && cd build
           cmake .. -G Ninja \
             -DCMAKE_OSX_ARCHITECTURES=x86_64 \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.DEPLOYMENT_TARGET }} \
             -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/qt6-mavericks \
             -DQT_HOST_PATH=${{ runner.temp }}/qt6-host \
             -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -Wno-dev
 
       - name: Build target Qt
@@ -78,11 +115,20 @@ jobs:
       - name: Install target Qt
         run: cmake --install build
 
+      - name: Cache Qt modules
+        uses: actions/cache@v4
+        with:
+          path: /tmp/qt-modules
+          key: qt-modules-${{ env.QT_VERSION }}
+
       - name: Build Qt modules
         run: |
           for mod in qtsvg qtimageformats qtnetworkauth; do
-            git clone --depth 1 --branch v${{ env.QT_VERSION }} https://github.com/qt/$mod.git /tmp/$mod
-            mkdir /tmp/$mod/build && cd /tmp/$mod/build
+            if [ ! -d "/tmp/qt-modules/$mod" ]; then
+              git clone --depth 1 --branch v${{ env.QT_VERSION }} https://github.com/qt/$mod.git /tmp/qt-modules/$mod
+            fi
+            rm -rf /tmp/qt-modules/$mod/build
+            mkdir /tmp/qt-modules/$mod/build && cd /tmp/qt-modules/$mod/build
             cmake .. -G Ninja \
               -DCMAKE_OSX_ARCHITECTURES=x86_64 \
               -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.DEPLOYMENT_TARGET }} \
@@ -90,6 +136,8 @@ jobs:
               -DCMAKE_PREFIX_PATH=${{ runner.temp }}/qt6-mavericks \
               -DQT_HOST_PATH=${{ runner.temp }}/qt6-host \
               -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+              -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
               -Wno-dev
             cmake --build . --parallel
             cmake --install .
