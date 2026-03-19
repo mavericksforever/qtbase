@@ -301,7 +301,7 @@ typedef QSharedPointer<QFileDialogOptions> SharedPointerFileDialogOptions;
 
             QMacAutoReleasePool pool;
             auto *alert = [[NSAlert new] autorelease];
-            alert.alertStyle = NSCriticalAlertStyle;
+            alert.alertStyle = NSAlertStyleCritical;
 
             alert.messageText = [NSString stringWithFormat:qt_mac_AppKitString(@"SavePanel",
                 @"\\U201c%@\\U201d already exists. Do you want to replace it?"),

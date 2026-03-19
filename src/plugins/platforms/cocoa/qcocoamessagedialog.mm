@@ -148,13 +148,13 @@ bool QCocoaMessageDialog::show(Qt::WindowFlags windowFlags, Qt::WindowModality w
     }
     case QMessageDialogOptions::Information:
     case QMessageDialogOptions::Question:
-        [m_alert setAlertStyle:NSInformationalAlertStyle];
+        [m_alert setAlertStyle:NSAlertStyleInformational];
         break;
     case QMessageDialogOptions::Warning:
-        [m_alert setAlertStyle:NSWarningAlertStyle];
+        [m_alert setAlertStyle:NSAlertStyleWarning];
         break;
     case QMessageDialogOptions::Critical:
-        [m_alert setAlertStyle:NSCriticalAlertStyle];
+        [m_alert setAlertStyle:NSAlertStyleCritical];
         break;
     }
 

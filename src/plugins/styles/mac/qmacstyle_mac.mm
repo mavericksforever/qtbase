@@ -3259,7 +3259,11 @@ void QMacStyle::drawPrimitive(PrimitiveElement pe, const QStyleOption *opt, QPai
                         // over-paint the (potentially custom) color in the background.
                         // In 'Light' mode we have to care about the correct
                         // background color. See the comments below for PE_PanelLineEdit.
-                        CGContextRef cgContext = (CGContextRef)[NSGraphicsContext.currentContext graphicsPort];
+                        CGContextRef cgContext;
+                        if (@available(macOS 10.10, *))
+                            cgContext = NSGraphicsContext.currentContext.CGContext;
+                        else
+                            cgContext = (CGContextRef)[NSGraphicsContext.currentContext graphicsPort];
                         // See QMacCGContext, here we expect bitmap context created with
                         // color space 'kCGColorSpaceSRGB', if it's something else - we
                         // give up.

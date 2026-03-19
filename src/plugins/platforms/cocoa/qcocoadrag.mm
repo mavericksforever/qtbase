@@ -106,7 +106,7 @@ Qt::DropAction QCocoaDrag::drag(QDrag *o)
     }
 
     m_drag = o;
-    QMacPasteboard dragBoard(CFStringRef(NSDragPboard), QUtiMimeConverter::HandlerScopeFlag::DnD);
+    QMacPasteboard dragBoard(CFStringRef((@available(macOS 10.13, *) ? NSPasteboardNameDrag : @"Apple CFPasteboard drag")), QUtiMimeConverter::HandlerScopeFlag::DnD);
     m_drag->mimeData()->setData("application/x-qt-mime-type-name"_L1, QByteArray("dummy"));
     dragBoard.setMimeData(m_drag->mimeData(), QMacPasteboard::LazyRequest);
 
@@ -125,7 +125,7 @@ Qt::DropAction QCocoaDrag::drag(QDrag *o)
     CGFloat flippedY = dragImage.size.height - hotSpot.y();
     event_location.y -= flippedY;
     NSSize mouseOffset_unused = NSMakeSize(0.0, 0.0);
-    NSPasteboard *pboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+    NSPasteboard *pboard = [NSPasteboard pasteboardWithName:(@available(macOS 10.13, *) ? NSPasteboardNameDrag : @"Apple CFPasteboard drag")];
 
     [theWindow dragImage:dragImage
         at:event_location
@@ -153,7 +153,7 @@ bool QCocoaDrag::maybeDragMultipleItems()
     auto *sourceView = static_cast<NSView<NSDraggingSource>*>(view);
 
     const auto &qtUrls = m_drag->mimeData()->urls();
-    NSPasteboard *dragBoard = [NSPasteboard pasteboardWithName:NSDragPboard];
+    NSPasteboard *dragBoard = [NSPasteboard pasteboardWithName:(@available(macOS 10.13, *) ? NSPasteboardNameDrag : @"Apple CFPasteboard drag")];
 
     if (qtUrls.size() <= 1) {
         // Good old -dragImage: works perfectly for this ...
