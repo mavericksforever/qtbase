@@ -356,7 +356,8 @@ bool QCocoaWindow::startSystemMove()
     case NSEventTypeOtherMouseDragged:
         // The documentation only describes starting a system move
         // based on mouse down events, but move events also work.
-        [m_view.window performWindowDragWithEvent:NSApp.currentEvent];
+        if (@available(macOS 10.11, *))
+            [m_view.window performWindowDragWithEvent:NSApp.currentEvent];
         return true;
     default:
         return false;
@@ -1990,10 +1991,12 @@ void QCocoaWindow::setWindowCursor(NSCursor *cursor)
 void QCocoaWindow::registerTouch(bool enable)
 {
     m_registerTouchCount += enable ? 1 : -1;
-    if (enable && m_registerTouchCount == 1)
-        m_view.allowedTouchTypes |= NSTouchTypeMaskIndirect;
-    else if (m_registerTouchCount == 0)
-        m_view.allowedTouchTypes &= ~NSTouchTypeMaskIndirect;
+    if (@available(macOS 10.12.2, *)) {
+        if (enable && m_registerTouchCount == 1)
+            m_view.allowedTouchTypes |= NSTouchTypeMaskIndirect;
+        else if (m_registerTouchCount == 0)
+            m_view.allowedTouchTypes &= ~NSTouchTypeMaskIndirect;
+    }
 }
 
 void QCocoaWindow::registerContentBorderArea(quintptr identifier, int upper, int lower)
