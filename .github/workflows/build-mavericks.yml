@@ -47,11 +47,14 @@ jobs:
       - name: Install host Qt
         run: cmake --install build-host
 
+      - name: Package host Qt
+        run: tar czf ${{ runner.temp }}/qt6-host.tar.gz -C ${{ runner.temp }} qt6-host
+
       - name: Upload host Qt
         uses: actions/upload-artifact@v4
         with:
           name: qt6-host
-          path: ${{ runner.temp }}/qt6-host
+          path: ${{ runner.temp }}/qt6-host.tar.gz
           retention-days: 1
 
   build-target:
@@ -68,7 +71,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: qt6-host
-          path: ${{ runner.temp }}/qt6-host
+          path: ${{ runner.temp }}
+
+      - name: Extract host Qt
+        run: tar xzf ${{ runner.temp }}/qt6-host.tar.gz -C ${{ runner.temp }}
 
       - name: Cache target build
         uses: actions/cache@v4
