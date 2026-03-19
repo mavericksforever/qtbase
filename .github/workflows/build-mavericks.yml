@@ -1,0 +1,159 @@
+name: Build Qt 6.8.3 for macOS 10.9 Mavericks
+
+on:
+  push:
+    branches: [6.8.3]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  QT_VERSION: "6.8.3"
+  DEPLOYMENT_TARGET: "10.9"
+
+jobs:
+  build-host:
+    name: Build host Qt (ARM)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure host Qt
+        run: |
+          mkdir build-host && cd build-host
+          cmake .. -G Ninja \
+            -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/qt6-host \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0 \
+            -DCMAKE_BUILD_TYPE=Release \
+            -Wno-dev
+
+      - name: Build host Qt
+        run: cmake --build build-host --parallel
+
+      - name: Install host Qt
+        run: cmake --install build-host
+
+      - name: Upload host Qt
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt6-host
+          path: ${{ runner.temp }}/qt6-host
+          retention-days: 1
+
+  build-target:
+    name: Build target Qt (x86_64, 10.9)
+    runs-on: macos-latest
+    needs: build-host
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download host Qt
+        uses: actions/download-artifact@v4
+        with:
+          name: qt6-host
+          path: ${{ runner.temp }}/qt6-host
+
+      - name: Build macports-legacy-support
+        run: |
+          git clone --depth 1 https://github.com/macports/macports-legacy-support.git /tmp/legacy
+          cd /tmp/legacy
+          make PREFIX=${{ runner.temp }}/legacy \
+            CFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
+            LDFLAGS="-arch x86_64 -mmacosx-version-min=${{ env.DEPLOYMENT_TARGET }}" \
+            install
+
+      - name: Configure target Qt
+        run: |
+          mkdir build && cd build
+          cmake .. -G Ninja \
+            -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.DEPLOYMENT_TARGET }} \
+            -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/qt6-mavericks \
+            -DQT_HOST_PATH=${{ runner.temp }}/qt6-host \
+            -DCMAKE_BUILD_TYPE=Release \
+            -Wno-dev
+
+      - name: Build target Qt
+        run: cmake --build build --parallel
+
+      - name: Install target Qt
+        run: cmake --install build
+
+      - name: Build Qt modules
+        run: |
+          for mod in qtsvg qtimageformats qtnetworkauth; do
+            git clone --depth 1 --branch v${{ env.QT_VERSION }} https://github.com/qt/$mod.git /tmp/$mod
+            mkdir /tmp/$mod/build && cd /tmp/$mod/build
+            cmake .. -G Ninja \
+              -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ env.DEPLOYMENT_TARGET }} \
+              -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/qt6-mavericks \
+              -DCMAKE_PREFIX_PATH=${{ runner.temp }}/qt6-mavericks \
+              -DQT_HOST_PATH=${{ runner.temp }}/qt6-host \
+              -DCMAKE_BUILD_TYPE=Release \
+              -Wno-dev
+            cmake --build . --parallel
+            cmake --install .
+          done
+
+      - name: Package SDK
+        run: |
+          cd ${{ runner.temp }}
+          tar czf qt6-mavericks-x86_64.tar.gz qt6-mavericks
+          tar czf qt6-host-arm64.tar.gz qt6-host
+
+      - name: Upload target Qt
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt6-mavericks-x86_64
+          path: ${{ runner.temp }}/qt6-mavericks-x86_64.tar.gz
+
+      - name: Upload host Qt
+        uses: actions/upload-artifact@v4
+        with:
+          name: qt6-host-arm64
+          path: ${{ runner.temp }}/qt6-host-arm64.tar.gz
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: build-target
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Qt ${{ env.QT_VERSION }} for macOS 10.9 Mavericks
+          body: |
+            ## Qt ${{ env.QT_VERSION }} — macOS 10.9 Mavericks port
+
+            Drop-in replacement for Qt 6.8.3 with macOS 10.9 (Mavericks) support.
+            Also works on all newer macOS versions.
+
+            ### Downloads
+            - **qt6-mavericks-x86_64.tar.gz** — Target Qt (x86_64, deployment target 10.9)
+            - **qt6-host-arm64.tar.gz** — Host Qt tools for cross-compilation from ARM Mac
+
+            ### Usage
+            ```bash
+            tar xzf qt6-mavericks-x86_64.tar.gz
+            tar xzf qt6-host-arm64.tar.gz
+            cmake .. \
+              -DCMAKE_PREFIX_PATH=$PWD/qt6-mavericks \
+              -DQT_HOST_PATH=$PWD/qt6-host \
+              -DCMAKE_OSX_ARCHITECTURES=x86_64 \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=10.9
+            ```
+
+            ### Included modules
+            - QtBase (Core, Gui, Widgets, Network, DBus, OpenGL, PrintSupport)
+            - QtSvg
+            - QtImageFormats
+            - QtNetworkAuth
+          files: |
+            qt6-mavericks-x86_64/qt6-mavericks-x86_64.tar.gz
+            qt6-host-arm64/qt6-host-arm64.tar.gz
