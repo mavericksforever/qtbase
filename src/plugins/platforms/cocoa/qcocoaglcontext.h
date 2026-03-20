@@ -51,6 +51,7 @@ private:
 
     NSOpenGLContext *m_context = nil;
     NSOpenGLContext *m_shareContext = nil;
+    NSOpenGLPixelFormat *m_pixelFormat = nil;
     QSurfaceFormat m_format;
     QVarLengthArray<QMacNotificationObserver, 3> m_updateObservers;
     QAtomicInt m_needsUpdate = false;

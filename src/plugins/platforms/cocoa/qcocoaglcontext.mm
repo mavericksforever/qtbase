@@ -66,7 +66,7 @@ void QCocoaGLContext::initialize()
         // this 4.1 version can find its way onto the format for the new
         // context, even though it was at no point requested by the user.
         GLint shareContextRequestedProfile;
-        [m_shareContext.pixelFormat getValues:&shareContextRequestedProfile
+        [static_cast<QCocoaGLContext *>(shareContext)->m_pixelFormat getValues:&shareContextRequestedProfile
             forAttribute:NSOpenGLPFAOpenGLProfile forVirtualScreen:0];
         auto shareContextActualProfile = shareContext->format().version();
 
@@ -82,13 +82,13 @@ void QCocoaGLContext::initialize()
 
     // ------------------------- Create NSOpenGLContext -------------------------
 
-    NSOpenGLPixelFormat *pixelFormat = [pixelFormatForSurfaceFormat(m_format) autorelease];
-    m_context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:m_shareContext];
+    m_pixelFormat = pixelFormatForSurfaceFormat(m_format);
+    m_context = [[NSOpenGLContext alloc] initWithFormat:m_pixelFormat shareContext:m_shareContext];
 
     if (!m_context && m_shareContext) {
         qCWarning(lcQpaOpenGLContext, "Could not create NSOpenGLContext with shared context, "
             "falling back to unshared context.");
-        m_context = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:nil];
+        m_context = [[NSOpenGLContext alloc] initWithFormat:m_pixelFormat shareContext:nil];
         m_shareContext = nil;
     }
 
@@ -237,7 +237,7 @@ void QCocoaGLContext::updateSurfaceFormat()
 
     // ------------------ Query the pixel format ------------------
 
-    NSOpenGLPixelFormat *pixelFormat = m_context.pixelFormat;
+    NSOpenGLPixelFormat *pixelFormat = m_pixelFormat;
 
     GLint virtualScreen = [&, this]() {
         auto *platformScreen = static_cast<QCocoaScreen*>(context()->screen()->handle());
@@ -307,6 +307,7 @@ void QCocoaGLContext::updateSurfaceFormat()
 
 QCocoaGLContext::~QCocoaGLContext()
 {
+    [m_pixelFormat release];
     [m_context release];
 }
 

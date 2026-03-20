@@ -150,7 +150,11 @@ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSColorPanelDelegate);
     // exact RGB value from the color picker, which is predictable. Further,
     // painting with the color will reproduce the same color on-screen, as
     // long as the the same screen is used for selecting the color.
-    NSColor *componentColor = [[mColorPanel color] colorUsingType:NSColorTypeComponentBased];
+    NSColor *componentColor;
+    if (@available(macOS 10.13, *))
+        componentColor = [[mColorPanel color] colorUsingType:NSColorTypeComponentBased];
+    else
+        componentColor = [[mColorPanel color] colorUsingColorSpaceName:NSCalibratedRGBColorSpaceName];
     switch (componentColor.colorSpace.colorSpaceModel)
     {
     case NSColorSpaceModelGray: {

@@ -312,7 +312,7 @@ typedef QSharedPointer<QFileDialogOptions> SharedPointerFileDialogOptions;
                         fileInfo.absoluteDir().dirName().toNSString()];
 
             auto *replaceButton = [alert addButtonWithTitle:qt_mac_AppKitString(@"SavePanel", @"Replace")];
-            if (@available(macOS 10.12, *))
+            if (@available(macOS 11.0, *))
                 replaceButton.hasDestructiveAction = YES;
             replaceButton.tag = 1337;
             [alert addButtonWithTitle:qt_mac_AppKitString(@"Common", @"Cancel")];
