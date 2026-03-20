@@ -455,7 +455,7 @@ const QAppleKeyMapper::KeyMap &QAppleKeyMapper::keyMapForKey(VirtualKeyCode virt
         if (err == noErr && actualStringLength)
             carbonUnicodeKey = QChar(unicodeString[0]);
 
-        if (canMapCocoaEvent) {
+        if (canMapCocoaEvent && @available(macOS 10.15, *)) {
             // Until we've verified that the Cocoa API works as expected
             // we first run the event through the Carbon APIs and then
             // compare the results to Cocoa.

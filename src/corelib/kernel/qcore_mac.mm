@@ -266,9 +266,11 @@ QMacAutoReleasePool::QMacAutoReleasePool()
     Class trackerClass = [QMacAutoReleasePoolTracker class];
 
     void *poolFrame = nullptr;
-    void *frames[2];
-    if (backtrace_from_fp(__builtin_frame_address(0), frames, 2))
-        poolFrame = frames[1];
+    if (@available(macOS 10.14, *)) {
+        void *frames[2];
+        if (backtrace_from_fp(__builtin_frame_address(0), frames, 2))
+            poolFrame = frames[1];
+    }
 
     if (poolFrame) {
         Dl_info info;
