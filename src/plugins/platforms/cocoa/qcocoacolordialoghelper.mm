@@ -154,7 +154,7 @@ QT_NAMESPACE_ALIAS_OBJC_CLASS(QNSColorPanelDelegate);
     if (@available(macOS 10.13, *))
         componentColor = [[mColorPanel color] colorUsingType:NSColorTypeComponentBased];
     else
-        componentColor = [[mColorPanel color] colorUsingColorSpaceName:NSCalibratedRGBColorSpaceName];
+        componentColor = [[mColorPanel color] colorUsingColorSpace:[NSColorSpace genericRGBColorSpace]];
     switch (componentColor.colorSpace.colorSpaceModel)
     {
     case NSColorSpaceModelGray: {
